@@ -376,7 +376,7 @@ def get_user_purchase_history(user_id: str):
     data = list(data)
     for item in data:
         if 'date' in item:
-            item['date'] = item['date'].isoformat()
+            item['date'] = item['date'] if isinstance(item['date'], str) else item['date'].isoformat()
     # logging.warning(data)
     data = convert_objectid_to_str(data)
     return data

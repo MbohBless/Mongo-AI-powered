@@ -224,7 +224,7 @@ def purchase_product_view():
         data = purchase_product_service(user_id)
         return jsonify_success_response(data)
     except Exception as e:
-        # logging.error(f"An error occurred: {str(e)}")
+        logging.error(f"An error occurred: {str(e)}")
         return jsonify_error_response([str(e)], message="An error occurred", status_code=400)
 
 
@@ -237,7 +237,7 @@ def get_user_purchase_history_view():
         data = get_user_purchase_history(user_id)
         return jsonify_success_response(data)
     except Exception as e:
-        # logging.error(f"An error occurred: {str(e)}")
+        logging.error(f"An error occurred: {str(e)}")
         return jsonify_error_response([str(e)], message="An error occurred", status_code=400)
 async def chat_with_agent():
     """
