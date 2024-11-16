@@ -39,7 +39,7 @@ cd Mongo-AI-powered
 ```bash
 pip install -r requirements.txt
 ```
-<!- -->
+
 <!-- for the env there are  -->
 4. Create a `.env` file in the root directory and add the following:
 ```env
@@ -55,7 +55,7 @@ OPENAI_API_URL= # your openai api url (remove if you are directly using openai)
 python app.py
 ```
 ```bash
-python chatbot.py
+chainlit run chainlit/app.py -w 
 ```
 7. Visit `http://localhost:5000` to view the application
 8. Visit `http://localhost:8000` to view the chatbot
