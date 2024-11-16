@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Details</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-md fixed w-full z-10">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <a href="/products" class="text-2xl font-bold text-indigo-600">Store</a>
+               
+                <!-- Cart Icon with Count Badge -->
+                <a href="/cart" class="relative text-gray-600 hover:text-indigo-600 transition-colors duration-200 ">
+                    <i class="fas fa-shopping-cart text-3xl"></i>
+                    <span id="cartCountBadge" class="absolute top-0 left-6 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full"></span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-20 pb-12 max-w-6xl mx-auto px-4">
+        <div id="productDetails"
+            class="bg-white rounded-lg shadow-lg p-6 transition-transform duration-300 hover:shadow-xl">
+            <!-- Product details will be dynamically inserted here -->
+        </div>
+    </main>
+
+    <script>
+        // Fetch and display product details
+        async function fetchProductDetails() {
+            try {
+
+                const productId = window.location.pathname.split('/').pop();
+                const response = await fetch(`/api/devfest/products/${productId}`);
+                const result = await response.json();
+                if (result.status === 'success') {
+                    displayProductDetails(result.data);
+                }
+            } catch (error) {
+                console.error('Error fetching product details:', error);
+            }
+        }
+
+        // Display product details in structured format
+        function displayProductDetails(product) {
+            const container = document.getElementById('productDetails');
+            container.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Product Image -->
+                <div>
+                    <img src="${product.image_url}" alt="${product.product_name}" 
+                        class="w-full rounded-lg shadow-md">
+                </div>
+
+                <!-- Product Information -->
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-3">${product.product_name}</h1>
+                    <p class="text-2xl text-indigo-600 font-semibold mb-4">$${product.price}</p>
+
+                    <div class="mb-5">
+                        <h2 class="text-xl font-semibold text-gray-800">Category</h2>
+                        <p class="text-gray-600 capitalize">${product.category.replace(/_/g, ' ')}</p>
+                    </div>
+
+                    <div class="mb-5">
+                        <h2 class="text-xl font-semibold text-gray-800">Features</h2>
+                        <p class="text-gray-700 leading-relaxed">${product.feature_string || 'No features available'}</p>
+                    </div>
+
+                    <div class="mb-5">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-2">Technical Details</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg shadow-inner">
+                            ${product.tech_data ? product.tech_data.map(item => `
+                                <div class="flex justify-between items-center p-2 bg-white rounded-lg shadow-sm">
+                                    <span class="font-medium text-gray-700">${item[0]}</span>
+                                    <span class="text-gray-600">${item[1]}</span>
+                                </div>
+                            `).join('') : '<p class="text-gray-600">No technical details available</p>'}
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex items-center space-x-4">
+                    <div class="flex items-center border rounded">
+                        <button onclick="updateQuantity(-1)" 
+                                class="px-3 py-2 text-gray-700 bg-white hover:bg-gray-100 rounded-l-lg">-</button>
+                        <span id="quantity" class="px-3 py-2 text-gray-700 bg-white">1</span>
+                        <button onclick="updateQuantity(1)"
+                                class="px-3 py-2 text-gray-700 bg-white hover:bg-gray-100 rounded-r-lg">+</button>
+                    </div>
+                    <button onclick="addToCart()" 
+                            class="px-5 py-2 text-white bg-indigo-600 rounded-lg font-semibold hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                        Add to Cart
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-indigo-600 transition-colors duration-200">
+                        <i class="far fa-heart"></i>
+                    </button>
+                </div>
+                </div>
+            </div>
+            `;
+        }
+
+        const USER_ID = localStorage.getItem('user_id') || 'demo_user';
+        let currentProduct = null;
+
+        function updateQuantity(delta) {
+            const quantityElement = document.getElementById('quantity');
+            let quantity = parseInt(quantityElement.textContent);
+            quantity = Math.max(1, quantity + delta);
+            quantityElement.textContent = quantity;
+        }
+
+        async function addToCart() {
+            console.log('Adding to cart');
+
+            // if (!currentProduct) return;
+            const productId = window.location.pathname.split('/').pop();
+
+            const quantity = parseInt(document.getElementById('quantity').textContent);
+            try {
+                const response = await fetch('/api/devfest/cart/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        product_id: productId,
+                        quantity: quantity,
+                        user_id: USER_ID
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Product added to cart!');
+                    fetchCartCount();
+                }
+            } catch (error) {
+                console.error('Error adding to cart:', error);
+                alert('Failed to add product to cart');
+            }
+        }
+
+        async function fetchCartCount() {
+        try {
+
+            const response = await fetch(`/api/devfest/cart/count?user_id=${USER_ID}`);
+            const result = await response.json();
+            console.log(result);
+            if (result.status === 'success') {
+                const cartCountBadge = document.getElementById('cartCountBadge');
+                cartCountBadge.textContent = result.data.count;
+            }
+        } catch (error) {
+            console.error('Error fetching cart count:', error);
+        }
+    }
+
+    // Initial load
+    fetchCartCount();
+
+
+        // Initial load
+        fetchProductDetails();
+    </script>
+</body>
+
+</html>

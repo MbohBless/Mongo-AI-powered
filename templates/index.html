@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern E-commerce Store</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-md fixed w-full z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center">
+                    <h1 class="text-2xl font-bold text-indigo-600">TechStore</h1>
+                </div>
+                
+                <!-- Search and Filter -->
+                <div class="flex items-center space-x-4 flex-1 justify-end max-w-xl">
+                    <div class="relative flex-1 max-w-sm">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </span>
+                        <input type="text" 
+                               id="searchInput" 
+                               placeholder="Search products..." 
+                               class="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none transition-colors duration-200">
+                    </div>
+                    
+                    <select id="categoryFilter" 
+                            class="appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-8 leading-tight focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-colors duration-200">
+                        <option value="">All Categories</option>
+                    </select>
+                    
+                    <!-- Cart Icon with Count Badge -->
+                    <a href="/cart" class="relative text-gray-600 hover:text-indigo-600 transition-colors duration-200">
+                        <i class="fas fa-shopping-cart text-3xl"></i>
+                        <span id="cartCountBadge" class="absolute top-0 left-6 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full"></span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-20 pb-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Products Grid -->
+            <div id="products" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Products will be dynamically inserted here -->
+            </div>
+        </div>
+    </main>
+    <script src="http://localhost:8000/copilot/index.js"></script>
+    
+    <script>
+        const USER_ID = localStorage.getItem('user_id') || 'demo_user';
+
+        // Chainlit message handling function
+        async function handleChainlitMessage(message) {
+            try {
+                const response = await fetch("http://localhost:5000/api/devfest/agent/conversation", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message
+                    }),
+                    params: {
+                        user_id: USER_ID
+                    }
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    return data.data.response;
+                } else {
+                    throw new Error(data.message || 'Failed to get response');
+                }
+            } catch (error) {
+                console.error('Error handling message:', error);
+                return `Error: ${error.message}`;
+            }
+        }
+
+        // E-commerce functionality
+        async function fetchCategories() {
+            try {
+                const response = await fetch('/api/devfest/products/categories');
+                const result = await response.json();
+                if (result.status === 'success') {
+                    const select = document.getElementById('categoryFilter');
+                    result.data.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category;
+                        option.textContent = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+            }
+        }
+
+        async function fetchProducts(category = '') {
+            try {
+                const url = category ?
+                    `/api/devfest/products/category/${category}` :
+                    '/api/devfest/products';
+                const response = await fetch(url);
+                const result = await response.json();
+                if (result.status === 'success') {
+                    displayProducts(result.data);
+                }
+            } catch (error) {
+                console.error('Error fetching products:', error);
+            }
+        }
+
+        function displayProducts(products) {
+            const container = document.getElementById('products');
+            container.innerHTML = '';
+
+            products.forEach(product => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden group';
+                card.innerHTML = `
+                    <div class="relative">
+                        <img src="${product.image_url}" 
+                             alt="${product.product_name}" 
+                             class="w-full h-48 object-cover transform group-hover:scale-105 transition-transform duration-300">
+                        <div class="absolute top-2 right-2">
+                            <span class="bg-white px-2 py-1 rounded-full text-sm font-medium text-gray-600 shadow-sm">
+                                $${product.price}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-1 line-clamp-2">
+                            ${product.product_name}
+                        </h3>
+                        <div class="flex items-center mb-3">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                ${product.category.replace(/_/g, ' ')}
+                            </span>
+                        </div>
+                        <div class="mt-2 flex justify-between items-center">
+                            <a href="/products/${product._id}" 
+                               class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                                View Details
+                                <i class="fas fa-arrow-right ml-2"></i>
+                            </a>
+                            <button class="p-2 text-gray-400 hover:text-indigo-600 transition-colors duration-200">
+                                <i class="far fa-heart"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        async function fetchCartCount() {
+            try {
+                const response = await fetch(`/api/devfest/cart/count?user_id=${USER_ID}`);
+                const result = await response.json();
+                if (result.status === 'success') {
+                    const cartCountBadge = document.getElementById('cartCountBadge');
+                    cartCountBadge.textContent = result.data.count;
+                }
+            } catch (error) {
+                console.error('Error fetching cart count:', error);
+            }
+        }
+
+        // Event listeners
+        document.getElementById('categoryFilter').addEventListener('change', (e) => {
+            fetchProducts(e.target.value);
+        });
+
+        document.getElementById('searchInput').addEventListener('input',
+            debounce(async (e) => {
+                if (e.target.value.trim()) {
+                    try {
+                        const response = await fetch(`/api/devfest/products/name/search?name=${e.target.value}`);
+                        const result = await response.json();
+                        if (result.status === 'success') {
+                            displayProducts(result.data);
+                        }
+                    } catch (error) {
+                        console.error('Error searching products:', error);
+                    }
+                } else {
+                    fetchProducts();
+                }
+            }, 300)
+        );
+
+        // Initialize Chainlit widget
+        window.addEventListener("chainlit-call-fn", (e) => {
+            const { name, args, callback } = e.detail;
+            handleChainlitMessage(args.msg).then(response => {
+                callback(response);
+            }).catch(error => {
+                callback(`Error: ${error.message}`);
+            });
+        });
+
+        // Initialize everything
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchCategories();
+            fetchProducts();
+            fetchCartCount();
+            
+            // Mount Chainlit widget
+            window.mountChainlitWidget({
+                chainlitServer: "http://localhost:8000",
+            });
+        });
+    </script>
+</body>
+</html>

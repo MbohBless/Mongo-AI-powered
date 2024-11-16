@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purchase History</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-md fixed w-full z-10">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <a href="/products" class="text-2xl font-bold text-indigo-600">Store</a>
+                
+                <!-- Cart Icon with Count Badge -->
+                <div class="flex items-center space-x-6">
+                    <a href="/purchase_history" class="text-indigo-600 hover:text-indigo-800 transition-colors duration-200">
+                        <i class="fas fa-history text-2xl"></i>
+                    </a>
+                    <a href="/cart" class="relative text-gray-600 hover:text-indigo-600 transition-colors duration-200">
+                        <i class="fas fa-shopping-cart text-3xl"></i>
+                        <span id="cartCountBadge" class="absolute top-0 left-6 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full"></span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-20 pb-12 max-w-6xl mx-auto px-4">
+        <h1 class="text-3xl font-bold text-gray-900 mb-6">Purchase History</h1>
+        <div id="purchaseHistory" class="space-y-6">
+            <!-- Purchase history items will be dynamically inserted here -->
+        </div>
+    </main>
+
+    <script>
+        const USER_ID = localStorage.getItem('user_id') || 'demo_user';
+
+        // Format date
+        function formatDate(dateString) {
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            return new Date(dateString).toLocaleDateString('en-US', options);
+        }
+
+        // Fetch purchase history
+        async function fetchPurchaseHistory() {
+            try {
+                const response = await fetch(`/api/devfest/cart/history?user_id=${USER_ID}`);
+                const result = await response.json();
+                if (result.status === 'success') {
+                    console.log(result.data);
+                    displayPurchaseHistory(result.data);
+                }
+            } catch (error) {
+                console.error('Error fetching purchase history:', error);
+            }
+        }
+
+        // Display purchase history
+        function displayPurchaseHistory(purchases) {
+            const container = document.getElementById('purchaseHistory');
+            container.innerHTML = purchases.map(purchase => `
+                <div class="bg-white rounded-lg shadow-lg p-6 transition-transform duration-300 hover:shadow-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Order Date</p>
+                            <p class="font-semibold">${formatDate(purchase.date)}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Total Amount</p>
+                            <p class="text-xl font-bold text-indigo-600">$${purchase.total.toFixed(2)}</p>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-4">
+                        <div class="space-y-4">
+                            ${purchase.products.map(product => `
+                                <div class="flex items-start space-x-4">
+                                    <img src="${product.image_url}" alt="${product.product_name}" 
+                                        class="w-24 h-24 object-cover rounded-lg">
+                                    <div class="flex-1">
+                                        <h3 class="font-semibold text-gray-900">${product.product_name}</h3>
+                                        <div class="flex justify-between items-center mt-2">
+                                            <div>
+                                                <p class="text-gray-600">Quantity: ${product.quantity}</p>
+                                                <p class="text-indigo-600 font-semibold">$${product.price *product.quantity}</p>
+                                            </div>
+                                            <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm capitalize">
+                                                ${product.category.replace(/_/g, ' ')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-500">Status</span>
+                            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full font-medium">
+                                ${purchase.status.charAt(0).toUpperCase() + purchase.status.slice(1)}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function fetchCartCount() {
+            try {
+                const response = await fetch(`/api/devfest/cart/count?user_id=${USER_ID}`);
+                const result = await response.json();
+                if (result.status === 'success') {
+                    const cartCountBadge = document.getElementById('cartCountBadge');
+                    cartCountBadge.textContent = result.data.count;
+                }
+            } catch (error) {
+                console.error('Error fetching cart count:', error);
+            }
+        }
+
+        // Initial load
+        fetchPurchaseHistory();
+        fetchCartCount();
+    </script>
+</body>
+
+</html>
